@@ -1,0 +1,16 @@
+
+# The Lost World
+
+Game petualangan 3D dengan suasana hutan misterius.
+
+## Fitur
+- Dunia hutan 3D
+- Karakter pemain
+- Joystick untuk bergerak
+- Tombol untuk melompat
+- Kamera orang ketiga
+
+## Teknologi
+- Babylon.js
+- Capacitor
+- Android

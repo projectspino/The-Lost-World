@@ -1,7 +1,5 @@
 extends Node3D
 
-var player: CharacterBody3D
-
 func _ready():
     create_world()
     create_player()
@@ -23,14 +21,14 @@ func create_world():
     add_child(light)
 
 func create_player():
-    player = CharacterBody3D.new()
+    var player = CharacterBody3D.new()
     player.name = "Player"
     player.position = Vector3(0, 1, 0)
+    player.set_script(load("res://player.gd"))
     add_child(player)
 
     var body = MeshInstance3D.new()
-    var capsule = CapsuleMesh.new()
-    body.mesh = capsule
+    body.mesh = CapsuleMesh.new()
     player.add_child(body)
 
     var camera = Camera3D.new()

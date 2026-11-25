@@ -1,0 +1,161 @@
+
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#10251a">
+<title>The Lost World</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#10251a;color:white;font-family:system-ui}
+#renderCanvas{width:100%;height:100%;display:block;touch-action:none}
+#hud{position:fixed;inset:0;pointer-events:none}
+#title{position:absolute;top:12px;left:0;right:0;text-align:center;font-weight:800;text-shadow:0 2px 5px #000;font-size:20px}
+#hint{position:absolute;top:42px;left:0;right:0;text-align:center;font-size:12px;text-shadow:0 1px 4px #000}
+#pad{position:absolute;left:18px;bottom:22px;width:136px;height:136px;border-radius:50%;background:#ffffff25;border:2px solid #ffffff70;pointer-events:auto;touch-action:none}
+#stick{position:absolute;left:43px;top:43px;width:48px;height:48px;border-radius:50%;background:#ffffffb8;border:2px solid white}
+#jump{position:absolute;right:24px;bottom:42px;width:76px;height:76px;border-radius:50%;border:2px solid white;background:#b7d88cbb;color:#132014;font-weight:800;pointer-events:auto}
+#status{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11px;text-shadow:0 1px 4px #000}
+</style>
+</head>
+<body>
+<canvas id="renderCanvas"></canvas>
+<div id="hud">
+<div id="title">THE LOST WORLD</div>
+<div id="hint">Jelajahi hutan misterius</div>
+<div id="pad"><div id="stick"></div></div>
+<button id="jump">LOMPAT</button>
+<div id="status">Joystick untuk bergerak • tombol untuk melompat</div>
+</div>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script>
+(()=>{
+const canvas=document.getElementById('renderCanvas');
+const engine=new BABYLON.Engine(canvas,true);
+const scene=new BABYLON.Scene(engine);
+scene.clearColor=new BABYLON.Color4(.035,.09,.07,1);
+
+const camera=new BABYLON.FollowCamera('camera',new BABYLON.Vector3(0,5,-9),scene);
+camera.radius=9;
+camera.heightOffset=3.2;
+camera.rotationOffset=180;
+camera.cameraAcceleration=.08;
+camera.maxCameraSpeed=10;
+
+const light=new BABYLON.HemisphericLight('sky',new BABYLON.Vector3(0,1,0),scene);
+light.intensity=.85;
+
+const sun=new BABYLON.DirectionalLight('sun',new BABYLON.Vector3(-.5,-1,.4),scene);
+sun.position=new BABYLON.Vector3(20,35,-20);
+sun.intensity=.6;
+
+const ground=BABYLON.MeshBuilder.CreateGround('floor',{width:180,height:180},scene);
+const gm=new BABYLON.StandardMaterial('gm',scene);
+gm.diffuseColor=new BABYLON.Color3(.12,.25,.12);
+gm.specularColor=new BABYLON.Color3(0,0,0);
+ground.material=gm;
+
+const tm=new BABYLON.StandardMaterial('trunk',scene);
+tm.diffuseColor=new BABYLON.Color3(.22,.12,.055);
+
+const lm=new BABYLON.StandardMaterial('leaves',scene);
+lm.diffuseColor=new BABYLON.Color3(.035,.19,.075);
+
+for(let i=0;i<90;i++){
+const a=Math.random()*Math.PI*2;
+const r=9+Math.random()*68;
+const x=Math.cos(a)*r;
+const z=Math.sin(a)*r;
+const h=2.5+Math.random()*2;
+const t=BABYLON.MeshBuilder.CreateCylinder('tree',{height:h,diameter:.55},scene);
+t.position.set(x,h/2,z);
+t.material=tm;
+const c=BABYLON.MeshBuilder.CreateSphere('crown',{diameter:2.2,segments:6},scene);
+c.position.set(x,h+.7,z);
+c.material=lm;
+}
+
+const player=BABYLON.MeshBuilder.CreateCapsule('player',{height:1.8,radius:.42},scene);
+const pm=new BABYLON.StandardMaterial('pm',scene);
+pm.diffuseColor=new BABYLON.Color3(.2,.48,.8);
+player.material=pm;
+player.position.y=.9;
+camera.lockedTarget=player;
+
+let dx=0,dz=0,vy=0,onGround=true;
+const pad=document.getElementById('pad');
+const stick=document.getElementById('stick');
+let active=false,center={x:0,y:0};
+
+function reset(){
+stick.style.left='43px';
+stick.style.top='43px';
+dx=dz=0;
+}
+
+pad.addEventListener('pointerdown',e=>{
+active=true;
+pad.setPointerCapture(e.pointerId);
+const r=pad.getBoundingClientRect();
+center={x:r.left+r.width/2,y:r.top+r.height/2};
+move(e);
+});
+
+pad.addEventListener('pointermove',e=>{
+if(active)move(e);
+});
+
+function move(e){
+let x=e.clientX-center.x;
+let y=e.clientY-center.y;
+let l=Math.hypot(x,y),m=43;
+if(l>m){x=x/l*m;y=y/l*m;}
+dx=x/m;
+dz=y/m;
+stick.style.left=(43+x)+'px';
+stick.style.top=(43+y)+'px';
+}
+
+function stop(){
+active=false;
+reset();
+}
+
+pad.addEventListener('pointerup',stop);
+pad.addEventListener('pointercancel',stop);
+
+document.getElementById('jump').addEventListener('pointerdown',e=>{
+e.preventDefault();
+if(onGround){vy=7;onGround=false;}
+});
+
+engine.runRenderLoop(()=>{
+const dt=Math.min(engine.getDeltaTime()/1000,.04);
+const f=new BABYLON.Vector3(-Math.sin(camera.rotation.y),0,-Math.cos(camera.rotation.y));
+const right=new BABYLON.Vector3(f.z,0,-f.x);
+const move=right.scale(dx).add(f.scale(-dz));
+
+if(move.length()>.05){
+move.normalize();
+player.position.addInPlace(move.scale(5*dt));
+player.rotation.y=Math.atan2(move.x,move.z);
+}
+
+vy-=18*dt;
+player.position.y+=vy*dt;
+
+if(player.position.y<.9){
+player.position.y=.9;
+vy=0;
+onGround=true;
+}
+
+scene.render();
+});
+
+window.addEventListener('resize',()=>engine.resize());
+})();
+</script>
+</body>
+</html>
